@@ -7,8 +7,8 @@ const initialProducts: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>[] = [
     id: 1,
     name: "Wireless Headphones",
     price: 99.99,
-    originalPrice: 129.99,
     image: "/placeholder.svg?height=300&width=300",
+    images: [],
     rating: 4.5,
     reviews: 128,
     category: "Electronics",
@@ -19,8 +19,8 @@ const initialProducts: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>[] = [
     id: 2,
     name: "Smart Watch",
     price: 199.99,
-    originalPrice: 249.99,
     image: "/placeholder.svg?height=300&width=300",
+    images: [],
     rating: 4.8,
     reviews: 89,
     category: "Electronics",
@@ -31,8 +31,8 @@ const initialProducts: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>[] = [
     id: 3,
     name: "Coffee Maker",
     price: 79.99,
-    originalPrice: 99.99,
     image: "/placeholder.svg?height=300&width=300",
+    images: [],
     rating: 4.3,
     reviews: 156,
     category: "Home",
@@ -43,8 +43,8 @@ const initialProducts: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>[] = [
     id: 4,
     name: "Yoga Mat",
     price: 29.99,
-    originalPrice: 39.99,
     image: "/placeholder.svg?height=300&width=300",
+    images: [],
     rating: 4.6,
     reviews: 203,
     category: "Fitness",
@@ -55,8 +55,8 @@ const initialProducts: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>[] = [
     id: 5,
     name: "Bluetooth Speaker",
     price: 49.99,
-    originalPrice: 69.99,
     image: "/placeholder.svg?height=300&width=300",
+    images: [],
     rating: 4.4,
     reviews: 94,
     category: "Electronics",
@@ -67,8 +67,8 @@ const initialProducts: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>[] = [
     id: 6,
     name: "Running Shoes",
     price: 89.99,
-    originalPrice: 119.99,
     image: "/placeholder.svg?height=300&width=300",
+    images: [],
     rating: 4.7,
     reviews: 167,
     category: "Fashion",
@@ -79,8 +79,8 @@ const initialProducts: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>[] = [
     id: 7,
     name: "Desk Lamp",
     price: 34.99,
-    originalPrice: 49.99,
     image: "/placeholder.svg?height=300&width=300",
+    images: [],
     rating: 4.2,
     reviews: 78,
     category: "Home",
@@ -91,8 +91,8 @@ const initialProducts: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>[] = [
     id: 8,
     name: "Backpack",
     price: 59.99,
-    originalPrice: 79.99,
     image: "/placeholder.svg?height=300&width=300",
+    images: [],
     rating: 4.5,
     reviews: 134,
     category: "Fashion",
@@ -103,8 +103,8 @@ const initialProducts: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>[] = [
     id: 9,
     name: "Air Purifier",
     price: 149.99,
-    originalPrice: 199.99,
     image: "/placeholder.svg?height=300&width=300",
+    images: [],
     rating: 4.6,
     reviews: 201,
     category: "Home",
@@ -115,8 +115,8 @@ const initialProducts: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>[] = [
     id: 10,
     name: "Protein Powder",
     price: 39.99,
-    originalPrice: 54.99,
     image: "/placeholder.svg?height=300&width=300",
+    images: [],
     rating: 4.4,
     reviews: 312,
     category: "Fitness",
@@ -127,8 +127,8 @@ const initialProducts: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>[] = [
     id: 11,
     name: "Gaming Mouse",
     price: 69.99,
-    originalPrice: 89.99,
     image: "/placeholder.svg?height=300&width=300",
+    images: [],
     rating: 4.7,
     reviews: 156,
     category: "Electronics",
@@ -139,8 +139,8 @@ const initialProducts: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>[] = [
     id: 12,
     name: "Skincare Set",
     price: 79.99,
-    originalPrice: 99.99,
     image: "/placeholder.svg?height=300&width=300",
+    images: [],
     rating: 4.3,
     reviews: 89,
     category: "Beauty",
@@ -155,48 +155,34 @@ async function seedDatabase() {
     
     const db = await getDatabase()
     const collection = db.collection<Product>('products')
-
-    // Check if products already exist
-    const existingProducts = await collection.countDocuments()
     
-    if (existingProducts > 0) {
-      console.log(`📦 Database already has ${existingProducts} products. Skipping seed.`)
-      return
-    }
-
-    // Add timestamps to products
-    const productsWithTimestamps = initialProducts.map(product => ({
+    // Clear existing products
+    console.log('🗑️ Clearing existing products...')
+    await collection.deleteMany({})
+    
+    // Insert new products
+    console.log('📦 Inserting products...')
+    const result = await collection.insertMany(initialProducts.map(product => ({
       ...product,
       createdAt: new Date(),
       updatedAt: new Date()
-    }))
-
-    // Insert products
-    const result = await collection.insertMany(productsWithTimestamps)
+    })))
     
     console.log(`✅ Successfully seeded ${result.insertedCount} products`)
     
-    // Create indexes for better performance
-    await collection.createIndex({ name: 'text', description: 'text' })
-    await collection.createIndex({ category: 1 })
-    await collection.createIndex({ id: 1 }, { unique: true })
-    
-    console.log('📊 Created database indexes')
-    console.log('🎉 Database seeding completed!')
+    // Display inserted products
+    const products = await collection.find({}).toArray()
+    console.log('\n📋 Inserted products:')
+    products.forEach(product => {
+      console.log(`  - ${product.name} ($${product.price}) [${product.category}]`)
+    })
     
   } catch (error) {
     console.error('❌ Error seeding database:', error)
+  } finally {
+    process.exit(0)
   }
 }
 
-// Run if script is executed directly
-if (require.main === module) {
-  seedDatabase().then(() => {
-    process.exit(0)
-  }).catch((error) => {
-    console.error(error)
-    process.exit(1)
-  })
-}
-
-export { seedDatabase } 
+// Run the seeding
+seedDatabase() 

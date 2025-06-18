@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Eye, EyeOff } from "lucide-react"
@@ -21,36 +21,61 @@ export default function Login() {
   const { toast } = useToast()
   const { login } = useAuth()
   const router = useRouter()
+  
+  // Refs for secure password handling
+  const passwordRef = useRef<HTMLInputElement>(null)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  // Secure form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
+    // Get password directly from input to avoid storing in state longer than necessary
+    const passwordValue = passwordRef.current?.value || formData.password
+    
     try {
-      const success = await login(formData.email, formData.password)
+      const success = await login(formData.email, passwordValue)
       
       if (success) {
+        // Clear form data immediately after successful login
+        setFormData({ email: "", password: "" })
+        if (passwordRef.current) {
+          passwordRef.current.value = ""
+        }
+        
         toast({
-          title: "Success!",
-          description: "You have been logged in successfully.",
+          title: "Sucesso!",
+          description: "Você foi conectado com sucesso.",
         })
         router.push("/")
       } else {
+        // Clear password on failed login
+        setFormData(prev => ({ ...prev, password: "" }))
+        if (passwordRef.current) {
+          passwordRef.current.value = ""
+        }
+        
         toast({
-          title: "Error",
-          description: "Invalid email or password.",
+          title: "Erro",
+          description: "Email ou senha inválidos.",
           variant: "destructive",
         })
       }
     } catch (error) {
+      // Clear password on error
+      setFormData(prev => ({ ...prev, password: "" }))
+      if (passwordRef.current) {
+        passwordRef.current.value = ""
+      }
+      
       toast({
-        title: "Error",
-        description: "An error occurred during login.",
+        title: "Erro",
+        description: "Ocorreu um erro durante o login.",
         variant: "destructive",
       })
     } finally {
@@ -58,20 +83,28 @@ export default function Login() {
     }
   }
 
+  // Clear sensitive data when component unmounts
+  const clearSensitiveData = () => {
+    setFormData({ email: "", password: "" })
+    if (passwordRef.current) {
+      passwordRef.current.value = ""
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Back to Products */}
-        <Link href="/" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
+        <Link href="/" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6" onClick={clearSensitiveData}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Products
+          Voltar aos Produtos
         </Link>
 
         <Card className="shadow-xl">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-            <CardDescription>Sign in to your StyleShop account</CardDescription>
-          </CardHeader>
+                      <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold">Bem-vindo de Volta</CardTitle>
+              <CardDescription>Entre na sua conta da BJJ Shop</CardDescription>
+            </CardHeader>
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -81,23 +114,26 @@ export default function Login() {
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="john@example.com"
+                  placeholder="joao@exemplo.com"
                   value={formData.email}
                   onChange={handleInputChange}
+                  autoComplete="email"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Senha</Label>
                 <div className="relative">
                   <Input
+                    ref={passwordRef}
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
+                    placeholder="Digite sua senha"
                     value={formData.password}
                     onChange={handleInputChange}
+                    autoComplete="current-password"
                     required
                   />
                   <Button
@@ -117,16 +153,16 @@ export default function Login() {
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Signing In..." : "Sign In"}
+                {loading ? "Entrando..." : "Entrar"}
               </Button>
             </form>
           </CardContent>
 
           <CardFooter className="text-center">
             <p className="text-sm text-gray-600">
-              Don't have an account?{" "}
-              <Link href="/register" className="text-purple-600 hover:underline font-medium">
-                Create one here
+              Não tem uma conta?{" "}
+              <Link href="/register" className="text-purple-600 hover:underline font-medium" onClick={clearSensitiveData}>
+                Criar uma aqui
               </Link>
             </p>
           </CardFooter>

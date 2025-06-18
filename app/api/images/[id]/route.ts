@@ -3,10 +3,10 @@ import { downloadImageFromGridFS } from '@/lib/gridfs'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const imageId = params.id
+    const { id: imageId } = await params
     
     if (!imageId) {
       return NextResponse.json(

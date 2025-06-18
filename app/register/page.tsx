@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Eye, EyeOff } from "lucide-react"
@@ -30,16 +30,40 @@ export default function Register() {
   const { register } = useAuth()
   const router = useRouter()
 
+  // Refs for secure password handling
+  const passwordRef = useRef<HTMLInputElement>(null)
+  const confirmPasswordRef = useRef<HTMLInputElement>(null)
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  // Clear sensitive data helper
+  const clearSensitiveData = () => {
+    setFormData(prev => ({ 
+      ...prev, 
+      password: "", 
+      confirmPassword: "" 
+    }))
+    if (passwordRef.current) {
+      passwordRef.current.value = ""
+    }
+    if (confirmPasswordRef.current) {
+      confirmPasswordRef.current.value = ""
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    if (formData.password !== formData.confirmPassword) {
+    // Get passwords directly from inputs
+    const passwordValue = passwordRef.current?.value || formData.password
+    const confirmPasswordValue = confirmPasswordRef.current?.value || formData.confirmPassword
+
+    if (passwordValue !== confirmPasswordValue) {
+      clearSensitiveData()
       toast({
         title: "Error",
         description: "Passwords do not match.",
@@ -50,6 +74,7 @@ export default function Register() {
     }
 
     if (!formData.agreeToTerms) {
+      clearSensitiveData()
       toast({
         title: "Error",
         description: "Please agree to the terms and conditions.",
@@ -64,26 +89,39 @@ export default function Register() {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
-        password: formData.password,
+        password: passwordValue,
       })
 
       if (success) {
+        // Clear all form data after successful registration
+        setFormData({
+          firstName: "",
+          lastName: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+          agreeToTerms: false,
+        })
+        clearSensitiveData()
+        
         toast({
-          title: "Success!",
-          description: "Your account has been created successfully.",
+          title: "Sucesso!",
+          description: "Sua conta foi criada com sucesso.",
         })
         router.push("/")
       } else {
+        clearSensitiveData()
         toast({
-          title: "Error",
-          description: "An account with this email already exists.",
+          title: "Erro",
+          description: "Já existe uma conta com este email.",
           variant: "destructive",
         })
       }
     } catch (error) {
+      clearSensitiveData()
       toast({
-        title: "Error",
-        description: "An error occurred during registration.",
+        title: "Erro",
+        description: "Ocorreu um erro durante o cadastro.",
         variant: "destructive",
       })
     } finally {
@@ -95,41 +133,43 @@ export default function Register() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Back to Products */}
-        <Link href="/" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
+        <Link href="/" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6" onClick={clearSensitiveData}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Products
+          Voltar aos Produtos
         </Link>
 
         <Card className="shadow-xl">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
-            <CardDescription>Join StyleShop and start shopping amazing products</CardDescription>
-          </CardHeader>
+                      <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold">Criar Conta</CardTitle>
+              <CardDescription>Junte-se à BJJ Shop e comece a comprar produtos incríveis</CardDescription>
+            </CardHeader>
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="firstName">Nome</Label>
                   <Input
                     id="firstName"
                     name="firstName"
                     type="text"
-                    placeholder="John"
+                    placeholder="João"
                     value={formData.firstName}
                     onChange={handleInputChange}
+                    autoComplete="given-name"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="lastName">Sobrenome</Label>
                   <Input
                     id="lastName"
                     name="lastName"
                     type="text"
-                    placeholder="Doe"
+                    placeholder="Silva"
                     value={formData.lastName}
                     onChange={handleInputChange}
+                    autoComplete="family-name"
                     required
                   />
                 </div>
@@ -141,23 +181,26 @@ export default function Register() {
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="john@example.com"
+                  placeholder="joao@exemplo.com"
                   value={formData.email}
                   onChange={handleInputChange}
+                  autoComplete="email"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Senha</Label>
                 <div className="relative">
                   <Input
+                    ref={passwordRef}
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
+                    placeholder="Digite sua senha"
                     value={formData.password}
                     onChange={handleInputChange}
+                    autoComplete="new-password"
                     required
                   />
                   <Button
@@ -177,15 +220,17 @@ export default function Register() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword">Confirmar Senha</Label>
                 <div className="relative">
                   <Input
+                    ref={confirmPasswordRef}
                     id="confirmPassword"
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm your password"
+                    placeholder="Confirme sua senha"
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
+                    autoComplete="new-password"
                     required
                   />
                   <Button
@@ -206,29 +251,35 @@ export default function Register() {
 
               <div className="flex items-center space-x-2">
                 <Checkbox
-                  id="terms"
+                  id="agreeToTerms"
                   checked={formData.agreeToTerms}
-                  onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, agreeToTerms: checked as boolean }))}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, agreeToTerms: checked as boolean }))
+                  }
                 />
-                <Label htmlFor="terms" className="text-sm text-gray-600">
-                  I agree to the{" "}
+                <Label htmlFor="agreeToTerms" className="text-sm text-gray-600">
+                  Eu concordo com os{" "}
                   <Link href="#" className="text-purple-600 hover:underline">
-                    Terms and Conditions
+                    Termos de Serviço
+                  </Link>{" "}
+                  e{" "}
+                  <Link href="#" className="text-purple-600 hover:underline">
+                    Política de Privacidade
                   </Link>
                 </Label>
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Creating Account..." : "Create Account"}
+                {loading ? "Criando Conta..." : "Criar Conta"}
               </Button>
             </form>
           </CardContent>
 
           <CardFooter className="text-center">
             <p className="text-sm text-gray-600">
-              Already have an account?{" "}
-              <Link href="#" className="text-purple-600 hover:underline font-medium">
-                Sign in
+              Já tem uma conta?{" "}
+              <Link href="/login" className="text-purple-600 hover:underline font-medium" onClick={clearSensitiveData}>
+                Entrar aqui
               </Link>
             </p>
           </CardFooter>

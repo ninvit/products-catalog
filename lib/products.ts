@@ -1,14 +1,43 @@
-import { Product } from '@/lib/models'
+import { Product, Category } from '@/lib/models'
 
-// Categories available in the system
-export const categories = [
-  "All",
-  "Electronics",
+// Function to fetch categories from database
+export async function fetchCategories(activeOnly: boolean = true): Promise<string[]> {
+  try {
+    const params = new URLSearchParams()
+    if (activeOnly) params.append('activeOnly', 'true')
+    
+    const response = await fetch(`/api/categories?${params}`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    const data = await response.json()
+    
+    if (data.success) {
+      const categoryNames = data.data.map((cat: Category) => cat.name)
+      return ["Todos", ...categoryNames]
+    } else {
+      throw new Error(data.error || 'Failed to fetch categories')
+    }
+  } catch (error) {
+    console.error('Error fetching categories:', error)
+    // Fallback para categorias padrão
+    return ["Todos", "Electronics", "Home", "Fashion", "Fitness", "Beauty"]
+  }
+}
+
+// Default categories for fallback
+export const defaultCategories = [
+  "Todos",
+  "Electronics", 
   "Home",
   "Fashion",
   "Fitness",
   "Beauty"
 ]
+
+// Categories - will be populated dynamically
+export let categories = defaultCategories
 
 export interface FilterOptions {
   category?: string
@@ -26,7 +55,7 @@ export async function fetchProducts(options?: {
   try {
     const params = new URLSearchParams()
     if (options?.search) params.append('search', options.search)
-    if (options?.category && options.category !== 'All') params.append('category', options.category)
+    if (options?.category && options.category !== 'Todos') params.append('category', options.category)
     if (options?.limit) params.append('limit', options.limit.toString())
 
     const response = await fetch(`/api/products?${params}`)

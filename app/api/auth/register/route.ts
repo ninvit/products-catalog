@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/mongodb'
-import { hashPassword, generateToken } from '@/lib/auth'
+import { hashPassword, generateToken, validatePasswordStrength, sanitizeUser } from '@/lib/auth'
 import { User, RegisterRequest } from '@/lib/models'
 
 export async function POST(request: NextRequest) {
@@ -19,6 +19,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate field lengths and content
+    if (firstName.trim().length < 2) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'First name must be at least 2 characters long' 
+        },
+        { status: 400 }
+      )
+    }
+
+    if (lastName.trim().length < 2) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Last name must be at least 2 characters long' 
+        },
+        { status: 400 }
+      )
+    }
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
@@ -31,12 +52,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate password length
-    if (password.length < 6) {
+    // Validate password strength
+    const passwordValidation = validatePasswordStrength(password)
+    if (!passwordValidation.isValid) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Password must be at least 6 characters long' 
+          error: passwordValidation.message 
         },
         { status: 400 }
       )
@@ -46,7 +68,7 @@ export async function POST(request: NextRequest) {
     const collection = db.collection<User>('users')
 
     // Check if user already exists
-    const existingUser = await collection.findOne({ email })
+    const existingUser = await collection.findOne({ email: email.toLowerCase() })
     if (existingUser) {
       return NextResponse.json(
         { 
@@ -61,15 +83,15 @@ export async function POST(request: NextRequest) {
     const lastUser = await collection.findOne({}, { sort: { id: -1 } })
     const nextId = (lastUser?.id || 0) + 1
 
-    // Hash password
+    // Hash password with strong security
     const hashedPassword = await hashPassword(password)
 
-    // Create user
+    // Create user with sanitized data
     const newUser: User = {
       id: nextId,
-      firstName,
-      lastName,
-      email,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.toLowerCase().trim(),
       password: hashedPassword,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -77,30 +99,31 @@ export async function POST(request: NextRequest) {
 
     const result = await collection.insertOne(newUser)
 
-    // Generate JWT token
-    const userWithoutPassword = {
-      id: newUser.id,
-      firstName: newUser.firstName,
-      lastName: newUser.lastName,
-      email: newUser.email
+    if (!result.insertedId) {
+      throw new Error('Failed to create user')
     }
 
-    const token = generateToken(userWithoutPassword)
+    // Generate JWT token with sanitized user data
+    const sanitizedUser = sanitizeUser(newUser)
+    const token = generateToken(sanitizedUser)
 
     return NextResponse.json({
       success: true,
       data: {
-        user: userWithoutPassword,
+        user: sanitizedUser,
         token
-      }
+      },
+      message: 'User registered successfully'
     }, { status: 201 })
 
   } catch (error) {
     console.error('Error registering user:', error)
+    
+    // Don't expose internal errors to client
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Failed to register user' 
+        error: 'Failed to register user. Please try again.' 
       },
       { status: 500 }
     )

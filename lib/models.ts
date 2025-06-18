@@ -1,14 +1,34 @@
 import { ObjectId } from 'mongodb'
 
+// Category interface
+export interface Category {
+  _id?: ObjectId
+  id: number
+  name: string
+  description?: string
+  isActive: boolean
+  createdAt?: Date
+  updatedAt?: Date
+}
+
+// Product Image interface
+export interface ProductImage {
+  id: string
+  url: string
+  filename: string
+  isPrimary: boolean
+  order: number
+}
+
 // Product interface
 export interface Product {
   _id?: ObjectId
   id: number
   name: string
   price: number
-  originalPrice?: number
-  image: string
-  imageId?: string // ID da imagem no GridFS
+  image: string // Mantido para compatibilidade (primeira imagem)
+  images: ProductImage[] // Array de múltiplas imagens
+  imageId?: string // ID da imagem no GridFS (mantido para compatibilidade)
   rating: number
   reviews: number
   category: string

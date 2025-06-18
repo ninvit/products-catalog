@@ -10,6 +10,233 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+  
+  /* Line clamp utilities for better text truncation */
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  /* Mobile-first responsive text utilities */
+  .text-responsive-sm {
+    @apply text-sm sm:text-base;
+  }
+  
+  .text-responsive-base {
+    @apply text-base sm:text-lg;
+  }
+  
+  .text-responsive-lg {
+    @apply text-lg sm:text-xl;
+  }
+  
+  .text-responsive-xl {
+    @apply text-xl sm:text-2xl;
+  }
+  
+  .text-responsive-2xl {
+    @apply text-2xl sm:text-3xl;
+  }
+  
+  /* Responsive spacing utilities */
+  .space-responsive {
+    @apply space-y-4 sm:space-y-6;
+  }
+  
+  .gap-responsive {
+    @apply gap-4 sm:gap-6 lg:gap-8;
+  }
+  
+  .p-responsive {
+    @apply p-4 sm:p-6;
+  }
+  
+  .px-responsive {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  
+  .py-responsive {
+    @apply py-6 sm:py-8 lg:py-12;
+  }
+  
+  /* Mobile menu animation */
+  .mobile-menu-enter {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  
+  .mobile-menu-enter-active {
+    transform: translateX(0);
+    opacity: 1;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  }
+  
+  .mobile-menu-exit {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  
+  .mobile-menu-exit-active {
+    transform: translateX(100%);
+    opacity: 0;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  }
+  
+  /* Touch target improvements for mobile */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  /* Safe area padding for iOS devices */
+  .safe-area-padding {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Improved focus states for accessibility */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  }
+  
+  /* Card hover effects */
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  }
+  
+  /* Button loading state */
+  .btn-loading {
+    @apply opacity-50 cursor-not-allowed;
+  }
+  
+  /* Responsive grid layouts */
+  .grid-responsive-cards {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8;
+  }
+  
+  .grid-mobile-products {
+    @apply grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6;
+  }
+  
+  .grid-responsive-features {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6;
+  }
+  
+  /* Mobile product card optimizations */
+  .product-card-mobile {
+    @apply flex flex-col h-full;
+  }
+  
+  .product-image-mobile {
+    @apply w-full aspect-square object-cover;
+  }
+  
+  .product-content-mobile {
+    @apply p-2 sm:p-4 flex-1 flex flex-col;
+  }
+  
+  .product-title-mobile {
+    @apply text-xs sm:text-sm lg:text-base font-semibold leading-tight line-clamp-2;
+  }
+  
+  .product-price-mobile {
+    @apply text-sm sm:text-lg font-bold;
+  }
+  
+  .product-button-mobile {
+    @apply w-full text-xs sm:text-sm h-8 sm:h-10;
+  }
+  
+  /* Responsive table */
+  .table-responsive {
+    @apply min-w-full overflow-x-auto;
+  }
+  
+  /* Image aspect ratios */
+  .aspect-product {
+    @apply aspect-square;
+  }
+  
+  .aspect-banner {
+    @apply aspect-video;
+  }
+  
+  /* Hero section with background image */
+  .hero-bg {
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+  }
+  
+  @media (max-width: 768px) {
+    .hero-bg {
+      background-attachment: scroll;
+    }
+  }
+  
+  /* Full image hero without cropping */
+  .hero-full-image {
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-color: #1a1a1a; /* Fallback color for areas not covered by image */
+  }
+  
+  /* Text shadows for better readability over images */
+  .text-shadow-sm {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+  
+  .text-shadow-md {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  }
+  
+  .text-shadow-lg {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.7);
+  }
+  
+  /* Scrollbar styling */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(156 163 175) transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgb(156 163 175);
+    border-radius: 3px;
+  }
 }
 
 @layer base {
@@ -90,5 +317,38 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+  
+  /* Improve mobile touch targets */
+  button, a, input, textarea, select {
+    @apply touch-target;
+  }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Improve text rendering */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* Remove tap highlight on mobile */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Base responsive font sizing */
+  html {
+    font-size: 16px;
+  }
+  
+  @media (max-width: 640px) {
+    html {
+      font-size: 14px;
+    }
   }
 }

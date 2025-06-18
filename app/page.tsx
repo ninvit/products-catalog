@@ -3,26 +3,43 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ShoppingCart, Star, Heart, Search, User, LogOut } from "lucide-react"
+import { ShoppingCart, Star, Heart, Search, User, LogOut, Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useToast } from "@/hooks/use-toast"
 import { useCart } from "@/contexts/CartContext"
 import { useAuth } from "@/contexts/AuthContext"
-import { searchProducts, categories } from "@/lib/products"
+import { searchProducts, fetchCategories } from "@/lib/products"
+import { ImageCarousel } from "@/components/ui/image-carousel"
 
 export default function ProductCatalog() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("All")
+  const [selectedCategory, setSelectedCategory] = useState("Todos")
+  const [categories, setCategories] = useState<string[]>(["Todos"])
   const [favorites, setFavorites] = useState<number[]>([])
   const [filteredProducts, setFilteredProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { toast } = useToast()
   const { state: cartState, dispatch } = useCart()
   const { state: authState, logout } = useAuth()
+
+  // Fetch categories on mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const categoriesList = await fetchCategories()
+        setCategories(categoriesList)
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+      }
+    }
+    loadCategories()
+  }, [])
 
   // Fetch products when search query or category changes
   useEffect(() => {
@@ -37,8 +54,8 @@ export default function ProductCatalog() {
         console.error('Error fetching products:', error)
         setFilteredProducts([])
         toast({
-          title: "Error",
-          description: "Failed to load products. Please try again.",
+          title: "Erro",
+          description: "Falha ao carregar produtos. Tente novamente.",
           variant: "destructive"
         })
       } finally {
@@ -52,8 +69,8 @@ export default function ProductCatalog() {
   const addToCart = (product: any) => {
     dispatch({ type: 'ADD_TO_CART', payload: product })
     toast({
-      title: "Added to cart",
-      description: `${product.name} has been added to your cart.`,
+      title: "Adicionado ao carrinho",
+      description: `${product.name} foi adicionado ao seu carrinho.`,
     })
   }
 
@@ -67,63 +84,73 @@ export default function ProductCatalog() {
 
   const handleLogout = () => {
     logout()
+    setMobileMenuOpen(false)
     toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
+      title: "Desconectado",
+      description: "Você foi desconectado com sucesso.",
     })
+  }
+
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false)
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white shadow-sm border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
+            {/* Logo */}
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">Vinicius Alkaim Store</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">BJJ Shop</h1>
             </div>
+
+            {/* Desktop Navigation */}
             <nav className="hidden md:flex space-x-8">
               <Link href="/" className="text-gray-900 hover:text-gray-600 font-medium">
-                Products
+                Produtos
               </Link>
               {authState.isLoggedIn && (
                 <Link href="/admin" className="text-gray-600 hover:text-gray-900">
-                  Admin Panel
+                  Painel Admin
                 </Link>
               )}
               {!authState.isLoggedIn && (
                 <>
                   <Link href="/login" className="text-gray-600 hover:text-gray-900">
-                    Login
+                    Entrar
                   </Link>
                   <Link href="/register" className="text-gray-600 hover:text-gray-900">
-                    Register
+                    Cadastrar
                   </Link>
                 </>
               )}
             </nav>
-            <div className="flex items-center space-x-4">
+
+            {/* Desktop Actions */}
+            <div className="hidden md:flex items-center space-x-4">
               {authState.isLoggedIn && (
-                <div className="hidden md:flex items-center space-x-4">
-                  <span className="text-sm text-gray-600">
-                    Welcome, {authState.user?.firstName}!
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm text-gray-600 hidden lg:block">
+                    Bem-vindo, {authState.user?.firstName}!
                   </span>
                   <Link href="/profile">
                     <Button variant="outline" size="sm">
                       <User className="h-4 w-4 mr-2" />
-                      Profile
+                      Perfil
                     </Button>
                   </Link>
                   <Button variant="outline" size="sm" onClick={handleLogout}>
                     <LogOut className="h-4 w-4 mr-2" />
-                    Logout
+                    Sair
                   </Button>
                 </div>
               )}
               <Link href="/cart" className="relative">
                 <Button variant="outline" size="sm">
                   <ShoppingCart className="h-4 w-4 mr-2" />
-                  Cart
+                  Carrinho
                   {cartState.itemCount > 0 && (
                     <Badge className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
                       {cartState.itemCount}
@@ -132,29 +159,116 @@ export default function ProductCatalog() {
                 </Button>
               </Link>
             </div>
+
+            {/* Mobile Actions */}
+            <div className="flex md:hidden items-center space-x-2">
+              <Link href="/cart" className="relative">
+                <Button variant="ghost" size="sm">
+                  <ShoppingCart className="h-5 w-5" />
+                  {cartState.itemCount > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                      {cartState.itemCount}
+                    </Badge>
+                  )}
+                </Button>
+              </Link>
+              
+              {/* Mobile Menu Trigger */}
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                  <SheetHeader>
+                    <SheetTitle>Menu</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex flex-col space-y-4 mt-6">
+                    {/* User Info */}
+                    {authState.isLoggedIn && (
+                      <div className="pb-4 border-b">
+                        <p className="text-sm text-gray-600 mb-2">
+                          Bem-vindo, {authState.user?.firstName}!
+                        </p>
+                        <Link href="/profile" onClick={closeMobileMenu}>
+                          <Button variant="outline" size="sm" className="w-full justify-start mb-2">
+                            <User className="h-4 w-4 mr-2" />
+                            Perfil
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
+
+                    {/* Navigation Links */}
+                                          <div className="space-y-2">
+                        <Link href="/" onClick={closeMobileMenu}>
+                          <Button variant="ghost" className="w-full justify-start">
+                            Produtos
+                          </Button>
+                        </Link>
+                        
+                        {authState.isLoggedIn && (
+                          <Link href="/admin" onClick={closeMobileMenu}>
+                            <Button variant="ghost" className="w-full justify-start">
+                              Painel Admin
+                            </Button>
+                          </Link>
+                        )}
+                        
+                        {!authState.isLoggedIn && (
+                          <>
+                            <Link href="/login" onClick={closeMobileMenu}>
+                              <Button variant="ghost" className="w-full justify-start">
+                                Entrar
+                              </Button>
+                            </Link>
+                            <Link href="/register" onClick={closeMobileMenu}>
+                              <Button variant="ghost" className="w-full justify-start">
+                                Cadastrar
+                              </Button>
+                            </Link>
+                          </>
+                        )}
+                      </div>
+
+                    {/* Actions */}
+                    {authState.isLoggedIn && (
+                      <div className="pt-4 border-t">
+                        <Button variant="outline" size="sm" onClick={handleLogout} className="w-full justify-start">
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Sair
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-r from-purple-600 to-blue-600 text-white py-16">
+      <section className="bg-gray-100 py-12 sm:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold mb-4">Vinicius Alkaim Store</h2>
-          <p className="text-xl mb-8">Nossos melhores produtos de Jiu-Jitsu</p>
-          <Button size="lg" variant="secondary">
-            Shop Now
-          </Button>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 text-gray-900">
+            BJJ Shop
+          </h2>
+          <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            Nossos melhores produtos de Jiu-Jitsu
+          </p>
         </div>
       </section>
 
       {/* Search and Filter Section */}
       <section className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">
-            <div className="relative flex-1 max-w-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between sm:space-x-4">
+            <div className="relative flex-1 max-w-full sm:max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search products..."
+                placeholder="Buscar produtos..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -162,8 +276,8 @@ export default function ProductCatalog() {
             </div>
             <div className="flex items-center space-x-4">
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Category" />
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
@@ -179,20 +293,20 @@ export default function ProductCatalog() {
       </section>
 
       {/* Products Grid */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex justify-between items-center mb-8">
-          <h3 className="text-2xl font-bold text-gray-900">
-            {searchQuery || selectedCategory !== "All" 
-              ? `Results ${loading ? '...' : `(${filteredProducts.length})`}` 
-              : "Featured Products"
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 space-y-4 sm:space-y-0">
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+            {searchQuery || selectedCategory !== "Todos" 
+              ? `Resultados ${loading ? '...' : `(${filteredProducts.length})`}` 
+              : "Produtos em Destaque"
             }
           </h3>
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap gap-2">
             {categories.slice(1).map((category) => (
               <Badge 
                 key={category} 
                 variant={selectedCategory === category ? "default" : "secondary"}
-                className="cursor-pointer"
+                className="cursor-pointer text-xs sm:text-sm"
                 onClick={() => setSelectedCategory(category)}
               >
                 {category}
@@ -202,47 +316,58 @@ export default function ProductCatalog() {
         </div>
 
         {loading ? (
-          <div className="text-center py-16">
+          <div className="text-center py-12 sm:py-16">
             <div className="text-gray-400 mb-4">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-12 sm:h-16 w-12 sm:w-16 border-b-2 border-purple-600 mx-auto"></div>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Loading products...</h3>
-            <p className="text-gray-600">
-              Please wait while we fetch the latest products.
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Carregando produtos...</h3>
+            <p className="text-sm sm:text-base text-gray-600">
+              Aguarde enquanto buscamos os produtos mais recentes.
             </p>
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-16">
+          <div className="text-center py-12 sm:py-16">
             <div className="text-gray-400 mb-4">
-              <Search className="h-16 w-16 mx-auto" />
+              <Search className="h-12 sm:h-16 w-12 sm:w-16 mx-auto" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No products found</h3>
-            <p className="text-gray-600 mb-4">
-              Try adjusting your search or filter to find what you're looking for.
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Nenhum produto encontrado</h3>
+            <p className="text-sm sm:text-base text-gray-600 mb-4">
+              Tente ajustar sua busca ou filtro para encontrar o que procura.
             </p>
-            <Button onClick={() => { setSearchQuery(""); setSelectedCategory("All") }}>
-              Clear Filters
+            <Button onClick={() => { setSearchQuery(""); setSelectedCategory("Todos") }}>
+              Limpar Filtros
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             {filteredProducts.map((product) => (
-              <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-300">
-                <CardContent className="p-0">
+              <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-300 flex flex-col">
+                <CardContent className="p-0 flex-1">
                   <div className="relative overflow-hidden rounded-t-lg">
                     <Link href={`/product/${product.id}`}>
-                      <Image
-                        src={product.image || "/placeholder.svg"}
-                        alt={product.name}
-                        width={300}
-                        height={300}
-                        className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                      />
+                      {product.images && product.images.length > 0 ? (
+                        <ImageCarousel
+                          images={product.images}
+                          alt={product.name}
+                          className="w-full aspect-square"
+                          showThumbnails={false}
+                          autoPlay={true}
+                          autoPlayInterval={4000}
+                        />
+                      ) : (
+                        <Image
+                          src={product.image || "/placeholder.svg"}
+                          alt={product.name}
+                          width={300}
+                          height={300}
+                          className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                        />
+                      )}
                     </Link>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="absolute top-2 right-2 bg-white/80 hover:bg-white"
+                      className="absolute top-2 right-2 bg-white/80 hover:bg-white h-8 w-8 p-0"
                       onClick={() => toggleFavorite(product.id)}
                     >
                       <Heart
@@ -254,55 +379,46 @@ export default function ProductCatalog() {
                       />
                     </Button>
                     {!product.inStock && (
-                      <Badge className="absolute top-2 left-2 bg-red-500">Out of Stock</Badge>
-                    )}
-                    {product.originalPrice && product.originalPrice > product.price && (
-                      <Badge className="absolute bottom-2 left-2 bg-green-500">
-                        {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
-                      </Badge>
+                      <Badge className="absolute top-2 left-2 bg-red-500 text-xs">Fora de Estoque</Badge>
                     )}
                   </div>
-                  <div className="p-6">
+                  <div className="p-2 sm:p-4 lg:p-6 flex-1 flex flex-col">
                     <div className="flex items-center justify-between mb-2">
-                      <Badge variant="outline">{product.category}</Badge>
-                      <div className="flex items-center">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm text-gray-600 ml-1">
-                          {product.rating} ({product.reviews})
+                      <Badge variant="outline" className="text-xs truncate max-w-[60%]">{product.category}</Badge>
+                      <div className="flex items-center flex-shrink-0">
+                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                        <span className="text-xs text-gray-600 ml-1">
+                          {product.rating}
                         </span>
                       </div>
                     </div>
                     <Link href={`/product/${product.id}`}>
-                      <h3 className="font-semibold text-gray-900 mb-2 hover:text-purple-600 transition-colors cursor-pointer line-clamp-2">
+                      <h3 className="font-semibold text-gray-900 mb-2 hover:text-purple-600 transition-colors cursor-pointer line-clamp-2 text-xs sm:text-sm lg:text-base leading-tight">
                         {product.name}
                       </h3>
                     </Link>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                    <p className="text-gray-600 text-xs mb-3 line-clamp-2 flex-1 hidden sm:block">
                       {product.description}
                     </p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xl font-bold text-gray-900">
+                    <div className="flex flex-col space-y-1 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between mt-auto">
+                      <div className="flex items-center space-x-1 sm:space-x-2">
+                        <span className="text-sm sm:text-lg font-bold text-gray-900">
                           ${product.price.toFixed(2)}
                         </span>
-                        {product.originalPrice && product.originalPrice > product.price && (
-                          <span className="text-sm text-gray-500 line-through">
-                            ${product.originalPrice.toFixed(2)}
-                          </span>
-                        )}
                       </div>
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="p-6 pt-0">
-                  <Button
-                    className="w-full"
-                    onClick={() => addToCart(product)}
-                    disabled={!product.inStock}
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    {product.inStock ? "Add to Cart" : "Out of Stock"}
-                  </Button>
+                <CardFooter className="p-2 sm:p-4 lg:p-6 pt-0">
+                                      <Button
+                      className="w-full text-xs sm:text-sm h-8 sm:h-10"
+                      onClick={() => addToCart(product)}
+                      disabled={!product.inStock}
+                    >
+                      <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">{product.inStock ? "Adicionar ao Carrinho" : "Fora de Estoque"}</span>
+                      <span className="sm:hidden">{product.inStock ? "Adicionar" : "N/D"}</span>
+                    </Button>
                 </CardFooter>
               </Card>
             ))}

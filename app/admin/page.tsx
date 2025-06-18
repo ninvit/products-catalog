@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Plus, Edit, Trash2, Search, Save, X, Upload, Package, BarChart3, TrendingUp, Users, Settings, Home } from "lucide-react"
+import { Plus, Edit, Trash2, Search, Save, X, Upload, Package, BarChart3, TrendingUp, Users, Settings, Home, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,17 +13,23 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useToast } from "@/hooks/use-toast"
-import { categories } from "@/lib/products"
+import { useAuth } from "@/contexts/AuthContext"
+import { useCart } from "@/contexts/CartContext"
+import { fetchCategories } from "@/lib/products"
+import { MultiImageUpload } from "@/components/ui/multi-image-upload"
+import { ProductImage, Category } from "@/lib/models"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface Product {
   id: number
   name: string
   description: string
   price: number
-  originalPrice?: number
   category: string
   image?: string
+  images: ProductImage[]
   inStock: boolean
   rating: number
   reviews: number
@@ -33,6 +39,8 @@ interface Product {
 
 export default function AdminPanel() {
   const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<string[]>(["All"])
+  const [categoriesData, setCategoriesData] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
@@ -40,20 +48,44 @@ export default function AdminPanel() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imagePreview, setImagePreview] = useState<string>("")
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState("products")
   const { toast } = useToast()
+  const { state: authState, logout } = useAuth()
+  const { state: cartState } = useCart()
 
   // Form state
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
-    originalPrice: "",
     category: "",
     image: "",
+    images: [] as ProductImage[],
     inStock: true,
     rating: "5",
     reviews: "0"
   })
+
+  // Fetch categories
+  const fetchCategoriesData = async () => {
+    try {
+      const response = await fetch('/api/categories')
+      const result = await response.json()
+      
+      if (result.success) {
+        setCategoriesData(result.data)
+        const categoryNames = ["All", ...result.data.map((cat: Category) => cat.name)]
+        setCategories(categoryNames)
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+      // Fallback para categorias padrão
+      setCategories(["All", "Electronics", "Home", "Fashion", "Fitness", "Beauty"])
+    }
+  }
 
   // Fetch products
   const fetchProducts = async () => {
@@ -84,8 +116,27 @@ export default function AdminPanel() {
   }
 
   useEffect(() => {
+    fetchCategoriesData()
     fetchProducts()
   }, [searchQuery, selectedCategory])
+
+  // Fetch categories on mount
+  useEffect(() => {
+    fetchCategoriesData()
+  }, [])
+
+  const handleLogout = () => {
+    logout()
+    setMobileMenuOpen(false)
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out.",
+    })
+  }
+
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false)
+  }
 
   // Handle image upload
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -180,9 +231,9 @@ export default function AdminPanel() {
       name: "",
       description: "",
       price: "",
-      originalPrice: "",
       category: "",
       image: "",
+      images: [],
       inStock: true,
       rating: "5",
       reviews: "0"
@@ -196,68 +247,62 @@ export default function AdminPanel() {
     e.preventDefault()
     
     try {
+      // Encontrar a imagem principal ou usar a primeira
+      const primaryImage = formData.images.find(img => img.isPrimary) || formData.images[0]
+      
       const productData = {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
-        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
         category: formData.category,
-        image: formData.image || "/placeholder.svg",
+        image: primaryImage?.url || formData.image, // Para compatibilidade
+        images: formData.images,
         inStock: formData.inStock,
         rating: parseFloat(formData.rating),
         reviews: parseInt(formData.reviews)
       }
 
-      let response
-      if (editingProduct) {
-        // Update existing product
-        response = await fetch(`/api/products/${editingProduct.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(productData)
-        })
-      } else {
-        // Create new product
-        response = await fetch('/api/products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(productData)
-        })
-      }
+      const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products'
+      const method = editingProduct ? 'PUT' : 'POST'
 
-      const result = await response.json()
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productData),
+      })
 
-      if (result.success) {
+      if (response.ok) {
         toast({
           title: "Sucesso",
-          description: `Produto ${editingProduct ? 'atualizado' : 'criado'} com sucesso`
+          description: editingProduct ? "Produto atualizado com sucesso" : "Produto criado com sucesso"
         })
-        setIsDialogOpen(false)
+        
         resetForm()
+        setIsDialogOpen(false)
         fetchProducts()
       } else {
-        throw new Error(result.error)
+        throw new Error('Falha ao salvar produto')
       }
     } catch (error) {
-      console.error('Error saving product:', error)
       toast({
         title: "Erro",
-        description: `Falha ao ${editingProduct ? 'atualizar' : 'criar'} produto`,
+        description: "Falha ao salvar produto",
         variant: "destructive"
       })
     }
   }
 
-  // Handle edit
   const handleEdit = (product: Product) => {
     setEditingProduct(product)
     setFormData({
       name: product.name,
       description: product.description,
       price: product.price.toString(),
-      originalPrice: product.originalPrice?.toString() || "",
       category: product.category,
       image: product.image || "",
+      images: product.images || [],
       inStock: product.inStock,
       rating: product.rating.toString(),
       reviews: product.reviews.toString()
@@ -266,486 +311,409 @@ export default function AdminPanel() {
     setIsDialogOpen(true)
   }
 
-  // Handle delete
   const handleDelete = async (productId: number) => {
-    if (!confirm('Tem certeza que deseja deletar este produto?')) return
+    if (!confirm('Tem certeza que deseja excluir este produto?')) return
 
     try {
       const response = await fetch(`/api/products/${productId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       })
 
-      const result = await response.json()
-
-      if (result.success) {
+      if (response.ok) {
         toast({
           title: "Sucesso",
-          description: "Produto deletado com sucesso"
+          description: "Produto excluído com sucesso"
         })
         fetchProducts()
       } else {
-        throw new Error(result.error)
+        throw new Error('Falha ao excluir produto')
       }
     } catch (error) {
-      console.error('Error deleting product:', error)
       toast({
         title: "Erro",
-        description: "Falha ao deletar produto",
+        description: "Falha ao excluir produto",
         variant: "destructive"
       })
     }
   }
 
-  // Calculate stats
-  const totalProducts = products.length
-  const inStockProducts = products.filter(p => p.inStock).length
-  const outOfStockProducts = totalProducts - inStockProducts
-  const avgRating = products.length > 0 ? (products.reduce((sum, p) => sum + p.rating, 0) / products.length).toFixed(1) : '0.0'
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Navigation */}
-      <header className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-white/20 sticky top-0 z-50">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-                  <Package className="h-5 w-5" />
-                </div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Painel Administrativo
-                </h1>
-              </div>
-              <nav className="hidden md:flex space-x-6">
-                <Link href="/" className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors duration-200">
-                  <Home className="h-4 w-4" />
-                  <span>Voltar à Loja</span>
-                </Link>
-              </nav>
+            <div className="flex items-center space-x-4">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Admin Panel</h1>
+            </div>
+
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center space-x-4">
+              <Link href="/" className="text-gray-600 hover:text-gray-900">
+                <Button variant="ghost" size="sm">
+                  <Home className="h-4 w-4 mr-2" />
+                  Store
+                </Button>
+              </Link>
+              <Link href="/cart" className="relative">
+                <Button variant="ghost" size="sm">
+                  <Package className="h-4 w-4 mr-2" />
+                  Cart ({cartState.itemCount})
+                </Button>
+              </Link>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                Logout
+              </Button>
+            </nav>
+
+            {/* Mobile Menu */}
+            <div className="flex md:hidden">
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                  <SheetHeader>
+                    <SheetTitle>Menu</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex flex-col space-y-4 mt-6">
+                    <div className="pb-4 border-b">
+                      <p className="text-sm text-gray-600 mb-2">
+                        Welcome, {authState.user?.firstName}!
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Link href="/" onClick={closeMobileMenu}>
+                        <Button variant="ghost" className="w-full justify-start">
+                          <Home className="h-4 w-4 mr-2" />
+                          Store
+                        </Button>
+                      </Link>
+                      <Link href="/cart" onClick={closeMobileMenu}>
+                        <Button variant="ghost" className="w-full justify-start">
+                          <Package className="h-4 w-4 mr-2" />
+                          Cart ({cartState.itemCount})
+                        </Button>
+                      </Link>
+                    </div>
+
+                    <div className="pt-4 border-t">
+                      <Button variant="outline" size="sm" onClick={handleLogout} className="w-full justify-start">
+                        Logout
+                      </Button>
+                    </div>
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
           </div>
         </div>
       </header>
-      
-      <div className="max-w-7xl mx-auto p-8">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Gerenciamento de Produtos</h2>
-              <p className="text-gray-600">Gerencie seu catálogo de produtos com facilidade</p>
-            </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button 
-                  onClick={resetForm}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-                  size="lg"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Produto
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="product-form-description">
-                <p id="product-form-description" className="sr-only">
-                  Formulário para adicionar ou editar produtos no catálogo
-                </p>
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-bold text-gray-900">
-                    {editingProduct ? 'Editar Produto' : 'Adicionar Novo Produto'}
-                  </DialogTitle>
-                </DialogHeader>
-                <div id="product-form-description" className="sr-only">
-                  Formulário para {editingProduct ? 'editar' : 'adicionar'} produto no catálogo
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center">
+                <Package className="h-8 w-8 text-blue-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Products</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{products.length}</p>
                 </div>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name" className="text-sm font-semibold text-gray-700">Nome do Produto *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                        placeholder="Digite o nome do produto"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="category" className="text-sm font-semibold text-gray-700">Categoria *</Label>
-                      <Select
-                        value={formData.category}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
-                        required
-                      >
-                        <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                          <SelectValue placeholder="Selecione a categoria" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.filter(cat => cat !== 'All').map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center">
+                <BarChart3 className="h-8 w-8 text-green-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">In Stock</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">
+                    {products.filter(p => p.inStock).length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center">
+                <TrendingUp className="h-8 w-8 text-purple-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Categories</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{categories.length - 1}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center">
+                <Users className="h-8 w-8 text-orange-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Avg Rating</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">
+                    {products.length > 0 
+                      ? (products.reduce((acc, p) => acc + p.rating, 0) / products.length).toFixed(1)
+                      : '0.0'
+                    }
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="products">Products</TabsTrigger>
+            <TabsTrigger value="categories">Categories</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="products" className="space-y-6">
+            {/* Controls */}
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 space-y-4 sm:space-y-0">
+          <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 sm:items-center">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 w-full sm:w-64"
+              />
+            </div>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm} className="w-full sm:w-auto">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingProduct ? 'Edit Product' : 'Add New Product'}
+                </DialogTitle>
+              </DialogHeader>
+              
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="description" className="text-sm font-semibold text-gray-700">Descrição *</Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                      placeholder="Digite a descrição do produto"
-                      rows={4}
+                    <Label htmlFor="name">Product Name</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
                       required
                     />
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="price" className="text-sm font-semibold text-gray-700">Preço *</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={formData.price}
-                        onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                        placeholder="0.00"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="originalPrice" className="text-sm font-semibold text-gray-700">Preço Original</Label>
-                      <Input
-                        id="originalPrice"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={formData.originalPrice}
-                        onChange={(e) => setFormData(prev => ({ ...prev, originalPrice: e.target.value }))}
-                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                        placeholder="0.00"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Image Upload Section */}
-                  <div className="space-y-4">
-                    <Label className="text-sm font-semibold text-gray-700">Imagem do Produto</Label>
-                    <div className="flex flex-col space-y-4">
-                      {/* Image Preview */}
-                      {imagePreview && (
-                        <div className="relative w-32 h-32 border-2 border-gray-300 rounded-lg overflow-hidden">
-                          <Image
-                            src={imagePreview}
-                            alt="Preview"
-                            fill
-                            className="object-cover"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            className="absolute top-1 right-1 p-1 h-6 w-6"
-                            onClick={() => {
-                              setImagePreview("")
-                              setFormData(prev => ({ ...prev, image: "" }))
-                            }}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      )}
-                      
-                      {/* Upload Button */}
-                      <div className="flex items-center space-x-4">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                          id="image-upload"
-                          disabled={uploadingImage}
-                        />
-                        <label htmlFor="image-upload">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="cursor-pointer"
-                            disabled={uploadingImage}
-                            asChild
-                          >
-                            <span>
-                              <Upload className="h-4 w-4 mr-2" />
-                              {uploadingImage ? 'Carregando...' : 'Selecionar Imagem'}
-                            </span>
-                          </Button>
-                        </label>
-                        <span className="text-sm text-gray-500">
-                          JPG, PNG ou GIF (máx. 5MB)
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="rating" className="text-sm font-semibold text-gray-700">Avaliação</Label>
-                      <Input
-                        id="rating"
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="5"
-                        value={formData.rating}
-                        onChange={(e) => setFormData(prev => ({ ...prev, rating: e.target.value }))}
-                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="reviews" className="text-sm font-semibold text-gray-700">Nº de Avaliações</Label>
-                      <Input
-                        id="reviews"
-                        type="number"
-                        min="0"
-                        value={formData.reviews}
-                        onChange={(e) => setFormData(prev => ({ ...prev, reviews: e.target.value }))}
-                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="flex items-center space-x-3 pt-6">
-                      <input
-                        type="checkbox"
-                        id="inStock"
-                        checked={formData.inStock}
-                        onChange={(e) => setFormData(prev => ({ ...prev, inStock: e.target.checked }))}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <Label htmlFor="inStock" className="text-sm font-semibold text-gray-700">Em Estoque</Label>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end space-x-3 pt-6 border-t">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                      <X className="h-4 w-4 mr-2" />
-                      Cancelar
-                    </Button>
-                    <Button 
-                      type="submit"
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                      disabled={uploadingImage}
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      {editingProduct ? 'Atualizar' : 'Criar'} Produto
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-shadow duration-200">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-blue-700">Total de Produtos</p>
-                    <p className="text-3xl font-bold text-blue-900">{totalProducts}</p>
-                  </div>
-                  <div className="p-3 bg-blue-500 rounded-full">
-                    <Package className="h-6 w-6 text-white" />
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.slice(1).map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-shadow duration-200">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-green-700">Em Estoque</p>
-                    <p className="text-3xl font-bold text-green-900">{inStockProducts}</p>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    rows={3}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="price">Price ($)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={(e) => setFormData({...formData, price: e.target.value})}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="images">Product Images</Label>
+                  <MultiImageUpload
+                    images={formData.images}
+                    onImagesChange={(images) => setFormData({...formData, images})}
+                    maxImages={5}
+                    disabled={uploadingImage}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="rating">Rating</Label>
+                    <Input
+                      id="rating"
+                      type="number"
+                      min="0"
+                      max="5"
+                      step="0.1"
+                      value={formData.rating}
+                      onChange={(e) => setFormData({...formData, rating: e.target.value})}
+                    />
                   </div>
-                  <div className="p-3 bg-green-500 rounded-full">
-                    <TrendingUp className="h-6 w-6 text-white" />
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="reviews">Reviews Count</Label>
+                    <Input
+                      id="reviews"
+                      type="number"
+                      min="0"
+                      value={formData.reviews}
+                      onChange={(e) => setFormData({...formData, reviews: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="inStock">In Stock</Label>
+                    <Select value={formData.inStock.toString()} onValueChange={(value) => setFormData({...formData, inStock: value === 'true'})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">Yes</SelectItem>
+                        <SelectItem value="false">No</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 hover:shadow-lg transition-shadow duration-200">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-red-700">Fora de Estoque</p>
-                    <p className="text-3xl font-bold text-red-900">{outOfStockProducts}</p>
-                  </div>
-                  <div className="p-3 bg-red-500 rounded-full">
-                    <BarChart3 className="h-6 w-6 text-white" />
-                  </div>
+
+                <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="w-full sm:w-auto">
+                    <Save className="h-4 w-4 mr-2" />
+                    {editingProduct ? 'Update' : 'Create'} Product
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-shadow duration-200">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-purple-700">Avaliação Média</p>
-                    <p className="text-3xl font-bold text-purple-900">{avgRating}</p>
-                  </div>
-                  <div className="p-3 bg-purple-500 rounded-full">
-                    <Users className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        {/* Search and Filter */}
-        <Card className="mb-8 bg-white/70 backdrop-blur-sm shadow-xl border-0">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-6">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <Input
-                  placeholder="Buscar produtos..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white/80"
-                />
-              </div>
-              <div className="flex items-center space-x-4">
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-48 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white/80">
-                    <SelectValue placeholder="Categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Badge variant="outline" className="bg-white/80 border-gray-300 text-gray-700 px-3 py-1">
-                  Total: {products.length}
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Products Table */}
-        <Card className="bg-white/70 backdrop-blur-sm shadow-xl border-0">
-          <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-t-lg">
-            <CardTitle className="text-xl font-semibold text-gray-900">Catálogo de Produtos</CardTitle>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg sm:text-xl">Products ({products.length})</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent>
             {loading ? (
-              <div className="text-center py-16">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600 font-medium">Carregando produtos...</p>
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading products...</p>
               </div>
             ) : products.length === 0 ? (
-              <div className="text-center py-16">
-                <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600 font-medium">Nenhum produto encontrado</p>
-                <p className="text-gray-500 text-sm">Tente ajustar sua busca ou adicionar um novo produto</p>
+              <div className="text-center py-8">
+                <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600">No products found</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50/50">
-                      <TableHead className="font-semibold text-gray-700">Imagem</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Produto</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Categoria</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Preço</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Estoque</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Avaliação</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Ações</TableHead>
+                    <TableRow>
+                      <TableHead className="w-12">Image</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead className="hidden sm:table-cell">Category</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead className="hidden md:table-cell">Stock</TableHead>
+                      <TableHead className="hidden lg:table-cell">Rating</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {products.map((product) => (
-                      <TableRow key={product.id} className="hover:bg-blue-50/50 transition-colors duration-200">
+                      <TableRow key={product.id}>
                         <TableCell>
-                          <div className="relative">
+                          <div className="w-10 h-10 rounded overflow-hidden">
                             <Image
                               src={product.image || "/placeholder.svg"}
                               alt={product.name}
-                              width={60}
-                              height={60}
-                              className="rounded-lg object-cover shadow-sm"
+                              width={40}
+                              height={40}
+                              className="object-cover"
                             />
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium">
-                          <div className="max-w-xs">
-                            <p className="font-semibold text-gray-900 truncate">{product.name}</p>
-                            <p className="text-sm text-gray-600 truncate">
-                              {product.description}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                            {product.category}
-                          </Badge>
-                        </TableCell>
                         <TableCell>
                           <div>
-                            <span className="font-semibold text-gray-900">R$ {product.price.toFixed(2)}</span>
-                            {product.originalPrice && product.originalPrice > product.price && (
-                              <span className="text-sm text-gray-500 line-through ml-2">
-                                R$ {product.originalPrice.toFixed(2)}
-                              </span>
-                            )}
+                            <p className="font-medium text-sm sm:text-base">{product.name}</p>
+                            <p className="text-xs text-gray-500 sm:hidden">{product.category}</p>
                           </div>
                         </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge variant="outline" className="text-xs">{product.category}</Badge>
+                        </TableCell>
                         <TableCell>
-                          <Badge 
-                            variant={product.inStock ? "default" : "destructive"}
-                            className={product.inStock ? "bg-green-100 text-green-800 border-green-200" : ""}
-                          >
-                            {product.inStock ? "Em Estoque" : "Fora de Estoque"}
+                          <span className="font-semibold">${product.price.toFixed(2)}</span>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <Badge variant={product.inStock ? "default" : "destructive"} className="text-xs">
+                            {product.inStock ? "In Stock" : "Out of Stock"}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-1">
-                            <span className="text-sm font-medium text-gray-700">
-                              {product.rating}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              ({product.reviews})
-                            </span>
-                          </div>
+                        <TableCell className="hidden lg:table-cell text-sm">
+                          {product.rating} ({product.reviews})
                         </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-1">
                             <Button
+                              variant="ghost"
                               size="sm"
-                              variant="outline"
                               onClick={() => handleEdit(product)}
-                              className="border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
+                              className="h-8 w-8 p-0"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
+                              variant="ghost"
                               size="sm"
-                              variant="outline"
                               onClick={() => handleDelete(product.id)}
-                              className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -759,7 +727,302 @@ export default function AdminPanel() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="categories" className="space-y-6">
+            {/* Categories Controls */}
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 space-y-4 sm:space-y-0">
+              <h3 className="text-lg font-semibold text-gray-900">Categories ({categoriesData.length})</h3>
+              
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Category
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Add New Category</DialogTitle>
+                  </DialogHeader>
+                  <CategoryForm onSuccess={fetchCategoriesData} />
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Categories Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>All Categories</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {categoriesData.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600">No categories found</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead className="hidden sm:table-cell">Description</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="hidden md:table-cell">Products</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {categoriesData.map((category) => (
+                          <CategoryRow 
+                            key={category.id} 
+                            category={category} 
+                            onUpdate={fetchCategoriesData}
+                            products={products}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
+  )
+}
+
+// Category Form Component
+function CategoryForm({ onSuccess, category }: { onSuccess: () => void, category?: Category }) {
+  const [formData, setFormData] = useState({
+    name: category?.name || "",
+    description: category?.description || "",
+    isActive: category?.isActive ?? true
+  })
+  const [loading, setLoading] = useState(false)
+  const { toast } = useToast()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const url = category ? `/api/categories/${category.id}` : '/api/categories'
+      const method = category ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: category ? "Category updated successfully" : "Category created successfully"
+        })
+        onSuccess()
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save category",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="categoryName">Name</Label>
+        <Input
+          id="categoryName"
+          value={formData.name}
+          onChange={(e) => setFormData({...formData, name: e.target.value})}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="categoryDescription">Description</Label>
+        <Textarea
+          id="categoryDescription"
+          value={formData.description}
+          onChange={(e) => setFormData({...formData, description: e.target.value})}
+          rows={3}
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          id="categoryActive"
+          checked={formData.isActive}
+          onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+          className="rounded"
+        />
+        <Label htmlFor="categoryActive">Active</Label>
+      </div>
+
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="submit" disabled={loading}>
+          {loading ? "Saving..." : category ? "Update" : "Create"}
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+// Category Row Component
+function CategoryRow({ category, onUpdate, products }: { 
+  category: Category, 
+  onUpdate: () => void,
+  products: Product[]
+}) {
+  const [loading, setLoading] = useState(false)
+  const { toast } = useToast()
+
+  const productCount = products.filter(p => p.category === category.name).length
+
+  const handleDelete = async () => {
+    if (productCount > 0) {
+      toast({
+        title: "Cannot Delete",
+        description: `This category has ${productCount} products. Remove products first.`,
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (!confirm(`Are you sure you want to delete "${category.name}"?`)) return
+
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/categories/${category.id}`, {
+        method: 'DELETE'
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Category deleted successfully"
+        })
+        onUpdate()
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete category",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleStatus = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/categories/${category.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: category.name,
+          description: category.description,
+          isActive: !category.isActive
+        })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: `Category ${category.isActive ? 'deactivated' : 'activated'} successfully`
+        })
+        onUpdate()
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update category",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <TableRow>
+      <TableCell>
+        <div>
+          <p className="font-medium">{category.name}</p>
+          <p className="text-xs text-gray-500 sm:hidden">{category.description}</p>
+        </div>
+      </TableCell>
+      <TableCell className="hidden sm:table-cell">
+        <p className="text-sm text-gray-600">{category.description || '-'}</p>
+      </TableCell>
+      <TableCell>
+        <Badge variant={category.isActive ? "default" : "secondary"}>
+          {category.isActive ? "Active" : "Inactive"}
+        </Badge>
+      </TableCell>
+      <TableCell className="hidden md:table-cell">
+        <span className="text-sm">{productCount} products</span>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end space-x-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleStatus}
+            disabled={loading}
+            className="h-8 w-8 p-0"
+          >
+            {category.isActive ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <Edit className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Edit Category</DialogTitle>
+              </DialogHeader>
+              <CategoryForm category={category} onSuccess={onUpdate} />
+            </DialogContent>
+          </Dialog>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDelete}
+            disabled={loading || productCount > 0}
+            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
   )
 } 
