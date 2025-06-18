@@ -37,7 +37,6 @@ const initialCategories: Omit<Category, '_id' | 'createdAt' | 'updatedAt'>[] = [
 
 async function seedCategories() {
   try {
-    console.log('🏷️ Starting categories seeding...')
     
     const db = await getDatabase()
     const collection = db.collection<Category>('categories')
@@ -46,29 +45,17 @@ async function seedCategories() {
     const existingCategories = await collection.countDocuments()
     
     if (existingCategories > 0) {
-      console.log(`📦 Database already has ${existingCategories} categories. Skipping seed.`)
       return
     }
     
     // Inserir categorias
-    console.log('📦 Inserting categories...')
     const result = await collection.insertMany(initialCategories.map(category => ({
       ...category,
       createdAt: new Date(),
       updatedAt: new Date()
     })))
     
-    console.log(`✅ Successfully seeded ${result.insertedCount} categories`)
-    
-    // Exibir categorias inseridas
-    const categories = await collection.find({}).toArray()
-    console.log('\n📋 Inserted categories:')
-    categories.forEach(category => {
-      console.log(`  - ${category.name}: ${category.description}`)
-    })
-    
   } catch (error) {
-    console.error('❌ Error seeding categories:', error)
   } finally {
     process.exit(0)
   }

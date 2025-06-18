@@ -106,7 +106,6 @@ export function MultiImageUpload({
         })
       }
     } catch (error) {
-      console.error('Error uploading images:', error)
       toast({
         title: "Erro",
         description: "Falha ao fazer upload das imagens",

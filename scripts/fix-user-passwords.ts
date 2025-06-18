@@ -10,7 +10,6 @@ interface UserDocument extends User {
 
 async function fixUserPasswords() {
   try {
-    console.log('🔐 Starting password security fix...')
     
     const db = await getDatabase()
     const collection = db.collection<UserDocument>('users')
@@ -19,11 +18,8 @@ async function fixUserPasswords() {
     const users = await collection.find({}).toArray()
     
     if (users.length === 0) {
-      console.log('👥 No users found in database')
       return
     }
-
-    console.log(`👥 Found ${users.length} users to check`)
     
     let fixedCount = 0
     let alreadyHashedCount = 0
@@ -34,13 +30,11 @@ async function fixUserPasswords() {
         const isAlreadyHashed = /^\$2[abyxy]?\$/.test(user.password)
         
         if (isAlreadyHashed) {
-          console.log(`✅ User ${user.email} already has hashed password`)
           alreadyHashedCount++
           continue
         }
 
         // If not hashed, hash the password
-        console.log(`🔧 Fixing password for user ${user.email}`)
         const hashedPassword = await hashPassword(user.password)
         
         await collection.updateOne(
@@ -54,23 +48,12 @@ async function fixUserPasswords() {
         )
         
         fixedCount++
-        console.log(`✅ Fixed password for ${user.email}`)
         
       } catch (userError) {
-        console.error(`❌ Error fixing password for user ${user.email}:`, userError)
       }
     }
 
-    console.log('\n📊 Password Security Fix Summary:')
-    console.log(`✅ Passwords already hashed: ${alreadyHashedCount}`)
-    console.log(`🔧 Passwords fixed: ${fixedCount}`)
-    console.log(`👥 Total users: ${users.length}`)
     
-    if (fixedCount > 0) {
-      console.log('🎉 Password security fix completed!')
-    } else {
-      console.log('✨ All passwords were already secure!')
-    }
     
   } catch (error) {
     console.error('❌ Error fixing user passwords:', error)
@@ -81,7 +64,6 @@ async function fixUserPasswords() {
 // Function to create a test user with properly hashed password
 async function createTestUser() {
   try {
-    console.log('\n👤 Creating test user...')
     
     const db = await getDatabase()
     const collection = db.collection<UserDocument>('users')
@@ -89,7 +71,6 @@ async function createTestUser() {
     // Check if test user already exists
     const existingUser = await collection.findOne({ email: 'test@example.com' })
     if (existingUser) {
-      console.log('👤 Test user already exists')
       return
     }
 
@@ -111,10 +92,6 @@ async function createTestUser() {
     }
 
     await collection.insertOne(testUser)
-    console.log('✅ Test user created:')
-    console.log('   Email: test@example.com')
-    console.log('   Password: 123456')
-    console.log('   Password is properly hashed with bcrypt')
     
   } catch (error) {
     console.error('❌ Error creating test user:', error)
@@ -124,7 +101,6 @@ async function createTestUser() {
 // Function to verify all passwords are properly hashed
 async function verifyPasswordSecurity() {
   try {
-    console.log('\n🔍 Verifying password security...')
     
     const db = await getDatabase()
     const collection = db.collection<UserDocument>('users')
@@ -139,32 +115,19 @@ async function verifyPasswordSecurity() {
       
       if (isHashed) {
         secureCount++
-        console.log(`✅ ${user.email} - Secure (hashed)`)
       } else {
         insecureCount++
-        console.log(`❌ ${user.email} - INSECURE (plaintext)`)
       }
     }
 
-    console.log('\n🛡️ Security Status:')
-    console.log(`✅ Secure passwords: ${secureCount}`)
-    console.log(`❌ Insecure passwords: ${insecureCount}`)
-    
-    if (insecureCount === 0) {
-      console.log('🎉 All passwords are secure!')
-    } else {
-      console.log('⚠️  Some passwords need fixing!')
-    }
-    
+  
   } catch (error) {
-    console.error('❌ Error verifying password security:', error)
   }
 }
 
 // Main function
 async function main() {
   try {
-    console.log('🚀 Starting password security maintenance...\n')
     
     // First, verify current state
     await verifyPasswordSecurity()
@@ -178,10 +141,7 @@ async function main() {
     // Final verification
     await verifyPasswordSecurity()
     
-    console.log('\n✨ Password security maintenance completed!')
-    
   } catch (error) {
-    console.error('💥 Fatal error:', error)
     process.exit(1)
   }
 }

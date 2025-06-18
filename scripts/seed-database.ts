@@ -151,34 +151,21 @@ const initialProducts: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>[] = [
 
 async function seedDatabase() {
   try {
-    console.log('🌱 Starting database seeding...')
     
     const db = await getDatabase()
     const collection = db.collection<Product>('products')
     
     // Clear existing products
-    console.log('🗑️ Clearing existing products...')
     await collection.deleteMany({})
     
     // Insert new products
-    console.log('📦 Inserting products...')
     const result = await collection.insertMany(initialProducts.map(product => ({
       ...product,
       createdAt: new Date(),
       updatedAt: new Date()
     })))
     
-    console.log(`✅ Successfully seeded ${result.insertedCount} products`)
-    
-    // Display inserted products
-    const products = await collection.find({}).toArray()
-    console.log('\n📋 Inserted products:')
-    products.forEach(product => {
-      console.log(`  - ${product.name} ($${product.price}) [${product.category}]`)
-    })
-    
   } catch (error) {
-    console.error('❌ Error seeding database:', error)
   } finally {
     process.exit(0)
   }

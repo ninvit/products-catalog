@@ -143,7 +143,7 @@ export default function AdminPanel() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    console.log('🔄 Iniciando upload:', { name: file.name, type: file.type, size: file.size })
+    
 
     // Verificar se é uma imagem
     if (!file.type.startsWith('image/')) {
@@ -168,21 +168,12 @@ export default function AdminPanel() {
     setUploadingImage(true)
 
     try {
-      console.log('📦 Criando FormData...')
       const formData = new FormData()
       formData.append('file', file)
 
-      console.log('🚀 Enviando requisição para /api/upload...')
-      
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData
-      })
-
-      console.log('📥 Resposta recebida:', { 
-        status: response.status, 
-        statusText: response.statusText,
-        ok: response.ok 
       })
 
       if (!response.ok) {
@@ -190,7 +181,6 @@ export default function AdminPanel() {
       }
 
       const result = await response.json()
-      console.log('✅ Resultado do upload:', result)
 
       if (result.success) {
         setFormData(prev => ({ ...prev, image: result.data.url }))

@@ -67,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       // Log masked version for debugging
-      console.log('🔒 Login attempt with email:', email, 'password: ***HIDDEN***')
+  
       
       const response = await makeAuthRequest('/api/auth/login', { email, password })
       
@@ -82,11 +82,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('user', JSON.stringify(data.data.user))
         localStorage.setItem('token', data.data.token)
         
-        console.log('✅ Login successful')
+
         return true
       }
       
-      console.log('❌ Login failed')
+      
       return false
     } catch (error) {
       console.error('Login error:', error)
@@ -97,7 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (userData: Omit<User, 'id'> & { password: string }): Promise<boolean> => {
     try {
       // Log masked version for debugging
-      console.log('🔒 Registration attempt:', { ...userData, password: '***HIDDEN***' })
+
       
       const response = await makeAuthRequest('/api/auth/register', userData)
       
@@ -112,11 +112,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('user', JSON.stringify(data.data.user))
         localStorage.setItem('token', data.data.token)
         
-        console.log('✅ Registration successful')
+
         return true
       }
       
-      console.log('❌ Registration failed')
+      
       return false
     } catch (error) {
       console.error('Registration error:', error)
@@ -132,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     })
     localStorage.removeItem('user')
     localStorage.removeItem('token')
-    console.log('🚪 User logged out')
+    
   }
 
   return (

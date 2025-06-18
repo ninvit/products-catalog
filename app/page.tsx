@@ -35,7 +35,7 @@ export default function ProductCatalog() {
         const categoriesList = await fetchCategories()
         setCategories(categoriesList)
       } catch (error) {
-        console.error('Error fetching categories:', error)
+        // Silently fail and use default categories
       }
     }
     loadCategories()
@@ -51,7 +51,6 @@ export default function ProductCatalog() {
         })
         setFilteredProducts(products)
       } catch (error) {
-        console.error('Error fetching products:', error)
         setFilteredProducts([])
         toast({
           title: "Erro",
@@ -201,7 +200,7 @@ export default function ProductCatalog() {
                     )}
 
                     {/* Navigation Links */}
-                                          <div className="space-y-2">
+                      <div className="space-y-2">
                         <Link href="/" onClick={closeMobileMenu}>
                           <Button variant="ghost" className="w-full justify-start">
                             Produtos

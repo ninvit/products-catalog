@@ -19,11 +19,10 @@ export async function fetchCategories(activeOnly: boolean = true): Promise<strin
     } else {
       throw new Error(data.error || 'Failed to fetch categories')
     }
-  } catch (error) {
-    console.error('Error fetching categories:', error)
-    // Fallback para categorias padrão
-    return ["Todos", "Electronics", "Home", "Fashion", "Fitness", "Beauty"]
-  }
+      } catch (error) {
+      // Fallback para categorias padrão
+      return ["Todos", "Electronics", "Home", "Fashion", "Fitness", "Beauty"]
+    }
 }
 
 // Default categories for fallback
@@ -71,7 +70,6 @@ export async function fetchProducts(options?: {
       throw new Error(data.error || 'Failed to fetch products')
     }
   } catch (error) {
-    console.error('Error fetching products:', error)
     return []
   }
 }
@@ -84,7 +82,6 @@ export const searchProducts = async (query: string, filters?: Partial<FilterOpti
       category: filters?.category
     })
   } catch (error) {
-    console.error('Error searching products:', error)
     return []
   }
 }
@@ -108,7 +105,6 @@ export const getProductById = async (id: number): Promise<Product | null> => {
       return null
     }
   } catch (error) {
-    console.error('Error fetching product:', error)
     return null
   }
 }
@@ -124,7 +120,6 @@ export const getRelatedProducts = async (productId: number, limit: number = 4): 
       .filter(p => p.id !== productId)
       .slice(0, limit)
   } catch (error) {
-    console.error('Error fetching related products:', error)
     return []
   }
 }
@@ -137,7 +132,6 @@ export const getFeaturedProducts = async (limit: number = 6): Promise<Product[]>
       .filter(product => product.rating >= 4.5)
       .slice(0, limit)
   } catch (error) {
-    console.error('Error fetching featured products:', error)
     return []
   }
 }
@@ -147,7 +141,6 @@ export const getAllProducts = async (): Promise<Product[]> => {
   try {
     return await fetchProducts()
   } catch (error) {
-    console.error('Error fetching all products:', error)
     return []
   }
 }
@@ -157,7 +150,6 @@ export const getProductsByCategory = async (category: string): Promise<Product[]
   try {
     return await fetchProducts({ category })
   } catch (error) {
-    console.error('Error fetching products by category:', error)
     return []
   }
 } 

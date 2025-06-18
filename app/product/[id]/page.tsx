@@ -46,7 +46,6 @@ export default function ProductPage({ params }: ProductPageProps) {
         setProduct(productData)
         setRelatedProducts(relatedData)
       } catch (error) {
-        console.error('Error fetching product data:', error)
         toast({
           title: "Error",
           description: "Failed to load product details",
