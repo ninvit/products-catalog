@@ -92,6 +92,8 @@ export default function AdminPanel() {
     const file = event.target.files?.[0]
     if (!file) return
 
+    console.log('🔄 Iniciando upload:', { name: file.name, type: file.type, size: file.size })
+
     // Verificar se é uma imagem
     if (!file.type.startsWith('image/')) {
       toast({
@@ -115,31 +117,56 @@ export default function AdminPanel() {
     setUploadingImage(true)
 
     try {
+      console.log('📦 Criando FormData...')
       const formData = new FormData()
       formData.append('file', file)
 
+      console.log('🚀 Enviando requisição para /api/upload...')
+      
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData
       })
 
+      console.log('📥 Resposta recebida:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        ok: response.ok 
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
       const result = await response.json()
+      console.log('✅ Resultado do upload:', result)
 
       if (result.success) {
         setFormData(prev => ({ ...prev, image: result.data.url }))
         setImagePreview(result.data.url)
         toast({
           title: "Sucesso",
-          description: "Imagem carregada com sucesso"
+          description: result.data.type === 'gridfs' 
+            ? "Imagem salva no MongoDB GridFS" 
+            : "Imagem carregada com sucesso"
         })
       } else {
-        throw new Error(result.error)
+        throw new Error(result.error || 'Erro desconhecido no servidor')
       }
     } catch (error) {
-      console.error('Error uploading image:', error)
+      console.error('❌ Error uploading image:', error)
+      
+      let errorMessage = "Falha ao fazer upload da imagem"
+      
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        errorMessage = "Erro de conexão: Servidor pode estar offline ou inacessível"
+      } else if (error instanceof Error) {
+        errorMessage = `Erro: ${error.message}`
+      }
+      
       toast({
-        title: "Erro",
-        description: "Falha ao fazer upload da imagem",
+        title: "Erro no Upload",
+        description: errorMessage,
         variant: "destructive"
       })
     } finally {
@@ -320,12 +347,18 @@ export default function AdminPanel() {
                   Adicionar Produto
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="product-form-description">
+                <p id="product-form-description" className="sr-only">
+                  Formulário para adicionar ou editar produtos no catálogo
+                </p>
                 <DialogHeader>
                   <DialogTitle className="text-2xl font-bold text-gray-900">
                     {editingProduct ? 'Editar Produto' : 'Adicionar Novo Produto'}
                   </DialogTitle>
                 </DialogHeader>
+                <div id="product-form-description" className="sr-only">
+                  Formulário para {editingProduct ? 'editar' : 'adicionar'} produto no catálogo
+                </div>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">

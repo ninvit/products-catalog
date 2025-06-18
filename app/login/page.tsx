@@ -131,16 +131,6 @@ export default function Login() {
             </p>
           </CardFooter>
         </Card>
-        
-        {/* Demo Credentials */}
-        <Card className="mt-4 bg-blue-50 border-blue-200">
-          <CardContent className="pt-6">
-            <h4 className="font-medium text-blue-900 mb-2">Demo Credentials:</h4>
-            <p className="text-sm text-blue-700">
-              Create an account first, then use those credentials to log in.
-            </p>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

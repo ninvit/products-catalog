@@ -8,6 +8,7 @@ export interface Product {
   price: number
   originalPrice?: number
   image: string
+  imageId?: string // ID da imagem no GridFS
   rating: number
   reviews: number
   category: string
