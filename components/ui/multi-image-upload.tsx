@@ -6,7 +6,7 @@ import { Upload, X, Star, GripVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/components/ui/use-toast'
 import { ProductImage } from '@/lib/models'
 
 interface MultiImageUploadProps {

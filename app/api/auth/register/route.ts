@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'All fields are required' 
+          error: 'Todos os campos são obrigatórios' 
         },
         { status: 400 }
       )
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'First name must be at least 2 characters long' 
+          error: 'O nome deve ter pelo menos 2 caracteres' 
         },
         { status: 400 }
       )
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Last name must be at least 2 characters long' 
+          error: 'O sobrenome deve ter pelo menos 2 caracteres' 
         },
         { status: 400 }
       )
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Invalid email format' 
+          error: 'Formato de email inválido' 
         },
         { status: 400 }
       )
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'User with this email already exists' 
+          error: 'Já existe uma conta com este email' 
         },
         { status: 409 }
       )
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
         user: sanitizedUser,
         token
       },
-      message: 'User registered successfully'
+      message: 'Usuário registrado com sucesso'
     }, { status: 201 })
 
   } catch (error) {
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Failed to register user. Please try again.' 
+        error: 'Falha ao registrar usuário. Tente novamente.' 
       },
       { status: 500 }
     )

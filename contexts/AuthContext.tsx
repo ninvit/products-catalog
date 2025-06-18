@@ -96,11 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (userData: Omit<User, 'id'> & { password: string }): Promise<boolean> => {
     try {
-      // Log masked version for debugging
-
-      
       const response = await makeAuthRequest('/api/auth/register', userData)
-      
       const data = await response.json()
       
       if (data.success) {
@@ -112,10 +108,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('user', JSON.stringify(data.data.user))
         localStorage.setItem('token', data.data.token)
         
-
         return true
       }
-      
       
       return false
     } catch (error) {

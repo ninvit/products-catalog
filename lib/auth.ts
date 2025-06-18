@@ -8,8 +8,8 @@ const BCRYPT_SALT_ROUNDS = 12 // High security level
 const JWT_EXPIRES_IN = '7d'
 
 // Password security requirements
-const PASSWORD_MIN_LENGTH = 8
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/
+const PASSWORD_MIN_LENGTH = 6
+const PASSWORD_REGEX = /^.{6,}$/ // Temporariamente mais flexível
 
 /**
  * Hash a password using bcrypt with salt rounds of 12
@@ -50,24 +50,24 @@ export async function verifyPassword(password: string, hashedPassword: string): 
  */
 export function validatePasswordStrength(password: string): { isValid: boolean; message: string } {
   if (!password) {
-    return { isValid: false, message: 'Password is required' }
+    return { isValid: false, message: 'A senha é obrigatória' }
   }
   
   if (password.length < PASSWORD_MIN_LENGTH) {
     return { 
       isValid: false, 
-      message: `Password must be at least ${PASSWORD_MIN_LENGTH} characters long` 
+      message: `A senha deve ter pelo menos ${PASSWORD_MIN_LENGTH} caracteres` 
     }
   }
   
   if (!PASSWORD_REGEX.test(password)) {
     return {
       isValid: false,
-      message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+      message: 'A senha deve ter pelo menos 6 caracteres'
     }
   }
   
-  return { isValid: true, message: 'Password is strong' }
+  return { isValid: true, message: 'Senha válida' }
 }
 
 /**

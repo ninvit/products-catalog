@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/contexts/AuthContext"
 
 export default function Register() {
@@ -85,14 +85,31 @@ export default function Register() {
     }
 
     try {
-      const success = await register({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        password: passwordValue,
+      // Fazer requisição direta para capturar mensagem de erro específica
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: passwordValue,
+        }),
       })
 
-      if (success) {
+      const data = await response.json()
+
+      if (data.success) {
+        // Atualizar o contexto de autenticação
+        const success = await register({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: passwordValue,
+        })
+
         // Clear all form data after successful registration
         setFormData({
           firstName: "",
@@ -112,8 +129,8 @@ export default function Register() {
       } else {
         clearSensitiveData()
         toast({
-          title: "Erro",
-          description: "Já existe uma conta com este email.",
+          title: "Erro no Cadastro",
+          description: data.error || "Falha no registro. Verifique os dados e tente novamente.",
           variant: "destructive",
         })
       }
