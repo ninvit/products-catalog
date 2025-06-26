@@ -102,7 +102,14 @@ export default function ProductCatalog() {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">BJJ Shop</h1>
+              <Image 
+                src="/uploads/alkaim.jpg" 
+                alt="Alkaim Logo" 
+                width={40}
+                height={40}
+                className="h-10 w-auto mr-3"
+              />
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Alkaim Store</h1>
             </div>
 
             {/* Desktop Navigation */}
@@ -252,7 +259,7 @@ export default function ProductCatalog() {
       <section className="bg-gray-100 py-12 sm:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 text-gray-900">
-            BJJ Shop
+            Alkaim Store
           </h2>
           <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
             Nossos melhores produtos de Jiu-Jitsu

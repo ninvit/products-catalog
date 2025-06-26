@@ -158,7 +158,7 @@ export default function Register() {
         <Card className="shadow-xl">
                       <CardHeader className="text-center">
               <CardTitle className="text-2xl font-bold">Criar Conta</CardTitle>
-              <CardDescription>Junte-se à BJJ Shop e comece a comprar produtos incríveis</CardDescription>
+              <CardDescription>Junte-se à Alkaim Store e comece a comprar produtos incríveis</CardDescription>
             </CardHeader>
 
           <CardContent>
