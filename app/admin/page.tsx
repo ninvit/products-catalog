@@ -54,6 +54,26 @@ export default function AdminPanel() {
   const { state: authState, logout } = useAuth()
   const { state: cartState } = useCart()
 
+  // Redirect if not admin
+  useEffect(() => {
+    if (!authState.loading && (!authState.isLoggedIn || authState.user?.role !== 'admin')) {
+      window.location.href = '/'
+    }
+  }, [authState.loading, authState.isLoggedIn, authState.user?.role])
+
+  // Helper function to make authenticated API requests
+  const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
+    const token = localStorage.getItem('token')
+    return fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    })
+  }
+
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -171,8 +191,12 @@ export default function AdminPanel() {
       const formData = new FormData()
       formData.append('file', file)
 
+      const token = localStorage.getItem('token')
       const response = await fetch('/api/upload', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: formData
       })
 
@@ -255,11 +279,8 @@ export default function AdminPanel() {
       const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products'
       const method = editingProduct ? 'PUT' : 'POST'
 
-      const response = await fetch(url, {
+      const response = await makeAuthenticatedRequest(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(productData),
       })
 
@@ -305,7 +326,7 @@ export default function AdminPanel() {
     if (!confirm('Tem certeza que deseja excluir este produto?')) return
 
     try {
-      const response = await fetch(`/api/products/${productId}`, {
+      const response = await makeAuthenticatedRequest(`/api/products/${productId}`, {
         method: 'DELETE',
       })
 
@@ -803,9 +824,13 @@ function CategoryForm({ onSuccess, category }: { onSuccess: () => void, category
       const url = category ? `/api/categories/${category.id}` : '/api/categories'
       const method = category ? 'PUT' : 'POST'
 
+      const token = localStorage.getItem('token')
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify(formData)
       })
 
@@ -898,8 +923,12 @@ function CategoryRow({ category, onUpdate, products }: {
 
     setLoading(true)
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`/api/categories/${category.id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
       })
 
       const result = await response.json()
@@ -927,9 +956,13 @@ function CategoryRow({ category, onUpdate, products }: {
   const toggleStatus = async () => {
     setLoading(true)
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`/api/categories/${category.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           name: category.name,
           description: category.description,

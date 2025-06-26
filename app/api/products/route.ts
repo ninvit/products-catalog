@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/mongodb'
 import { Product } from '@/lib/models'
+import { verifyAdminAccess } from '@/lib/admin-middleware'
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,6 +55,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify admin access
+    const authResult = await verifyAdminAccess(request)
+    if (authResult.error) {
+      return authResult.error
+    }
+
     const body = await request.json()
     const db = await getDatabase()
     const collection = db.collection<Product>('products')

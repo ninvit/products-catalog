@@ -93,6 +93,7 @@ export async function POST(request: NextRequest) {
       lastName: lastName.trim(),
       email: email.toLowerCase().trim(),
       password: hashedPassword,
+      role: 'user', // Default role for new users
       createdAt: new Date(),
       updatedAt: new Date()
     }

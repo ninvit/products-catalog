@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/mongodb'
 import { Category } from '@/lib/models'
+import { verifyAdminAccess } from '@/lib/admin-middleware'
 
 // GET - Buscar categoria específica
 export async function GET(
@@ -48,6 +49,12 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Verify admin access
+    const authResult = await verifyAdminAccess(request)
+    if (authResult.error) {
+      return authResult.error
+    }
+
     const categoryId = parseInt(params.id)
     
     if (isNaN(categoryId)) {
@@ -132,6 +139,12 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Verify admin access
+    const authResult = await verifyAdminAccess(request)
+    if (authResult.error) {
+      return authResult.error
+    }
+
     const categoryId = parseInt(params.id)
     
     if (isNaN(categoryId)) {

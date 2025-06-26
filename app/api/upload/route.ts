@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { uploadImageToGridFS } from '@/lib/gridfs'
+import { verifyAdminAccess } from '@/lib/admin-middleware'
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify admin access
+    const authResult = await verifyAdminAccess(request)
+    if (authResult.error) {
+      return authResult.error
+    }
+
     const formData = await request.formData()
     const file = formData.get('file') as File
     

@@ -130,7 +130,7 @@ export default function ProductCatalog() {
               <Link href="/" className="text-gray-900 hover:text-gray-600 font-medium">
                 Produtos
               </Link>
-              {authState.isLoggedIn && (
+              {authState.isLoggedIn && authState.user?.role === 'admin' && (
                 <Link href="/admin" className="text-gray-600 hover:text-gray-900">
                   Painel Admin
                 </Link>
@@ -227,7 +227,7 @@ export default function ProductCatalog() {
                           </Button>
                         </Link>
                         
-                        {authState.isLoggedIn && (
+                        {authState.isLoggedIn && authState.user?.role === 'admin' && (
                           <Link href="/admin" onClick={closeMobileMenu}>
                             <Button variant="ghost" className="w-full justify-start">
                               Painel Admin

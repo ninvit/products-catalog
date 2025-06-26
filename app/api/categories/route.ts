@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/mongodb'
 import { Category } from '@/lib/models'
+import { verifyAdminAccess } from '@/lib/admin-middleware'
 
 // GET - Buscar todas as categorias
 export async function GET(request: NextRequest) {
@@ -33,6 +34,12 @@ export async function GET(request: NextRequest) {
 // POST - Criar nova categoria
 export async function POST(request: NextRequest) {
   try {
+    // Verify admin access
+    const authResult = await verifyAdminAccess(request)
+    if (authResult.error) {
+      return authResult.error
+    }
+
     const body = await request.json()
     const { name, description } = body
     
