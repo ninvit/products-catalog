@@ -24,6 +24,7 @@ export default function ProductCatalog() {
   const [filteredProducts, setFilteredProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [logoError, setLogoError] = useState(false)
   const { toast } = useToast()
   const { state: cartState, dispatch } = useCart()
   const { state: authState, logout } = useAuth()
@@ -39,6 +40,10 @@ export default function ProductCatalog() {
       }
     }
     loadCategories()
+    
+    // Debug logo path in production
+    console.log('Logo path:', '/alkaim.jpg')
+    console.log('Base URL:', window.location.origin)
   }, [])
 
   // Fetch products when search query or category changes
@@ -102,13 +107,21 @@ export default function ProductCatalog() {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center">
-              <Image 
-                src="/uploads/alkaim.jpg" 
-                alt="Alkaim Logo" 
-                width={40}
-                height={40}
-                className="h-10 w-auto mr-3"
-              />
+              {!logoError ? (
+                <Image 
+                  src="/alkaim.jpg" 
+                  alt="Alkaim Logo" 
+                  width={40}
+                  height={40}
+                  className="h-10 w-auto mr-3"
+                  priority
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-10 w-10 bg-gray-800 text-white font-bold rounded mr-3">
+                  A
+                </div>
+              )}
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Alkaim Store</h1>
             </div>
 

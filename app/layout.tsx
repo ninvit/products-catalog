@@ -10,23 +10,28 @@ import { SecurityProvider } from "@/components/SecurityProvider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "StyleShop - Products Catalog",
+  title: "Alkaim Store - Products Catalog",
   description: "A modern e-commerce catalog with shopping cart functionality",
   generator: 'v0.dev',
-  applicationName: 'StyleShop',
+  applicationName: 'Alkaim Store',
   keywords: ['ecommerce', 'products', 'shopping', 'catalog', 'jiu-jitsu'],
   authors: [{ name: 'Vinicius Alkaim' }],
   creator: 'Vinicius Alkaim',
+  icons: {
+    icon: '/alkaim.jpg',
+    apple: '/alkaim.jpg',
+  },
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
   openGraph: {
-    title: 'StyleShop - Products Catalog',
+    title: 'Alkaim Store - Products Catalog',
     description: 'A modern e-commerce catalog with shopping cart functionality',
-    siteName: 'StyleShop',
+    siteName: 'Alkaim Store',
     type: 'website',
+    images: ['/alkaim.jpg'],
   },
   robots: {
     index: true,
